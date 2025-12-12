@@ -1,0 +1,21 @@
+# Dependências
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Variáveis de ambiente
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Banco de dados
+*.db
+*.sqlite
+
+# Sistema
+.DS_Store
