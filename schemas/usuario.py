@@ -7,6 +7,49 @@ from models.usuario import Usuario
 class UsuarioSchema(BaseModel):
     """Define os campos de um novo usuário a ser inserido
     """
-    email: str = "exemplo@gmail.com"
-    nome_usuario: str = "exemplo_usuario"
+    email: str = "fulanodesouza@gmail.com"
+    nome_usuario: str = "Fulano de Souza Rodrigues"
     senha: str = "senha123"
+
+class UsuarioBuscaSchema(BaseModel):
+    """ Define como deve ser a estrutura que representa a busca.
+        A busca será feita apenas com base no nome de usuário.
+    """
+    nome: str = "exemplo"
+
+class ListagemUsuariosSchema(BaseModel):
+    """ Define como uma listagem de produtos será retornada.
+    """
+    usuarios: List[UsuarioSchema]
+
+def apresenta_usuario(usuario:Usuario):
+    """ Retorna uma representação do usuario seguindo o schema definido em
+        UsuarioViewSchema.
+    """
+    return {
+            "email": usuario.email,
+            "nome_usuario": usuario.nome_usuario,
+            "data_criacao": usuario.data_criacao
+        }
+
+def apresenta_usuarios(usuarios:List[Usuario]):
+    """ Retorna uma representação do usuario seguindo o schema definido em
+        UsuarioViewSchema.
+    """
+    result = []
+    for usuario in usuarios:
+        result.append({
+            "email": usuario.email,
+            "nome_usuario": usuario.nome_usuario,
+            "data_criacao": usuario.data_criacao
+        })
+
+    return {"usuarios": result}
+
+class UsuarioViewSchema(BaseModel):
+    """Define como o usuario será retornado
+    """
+    email: str
+    nome_usuario: str
+    data_criacao: datetime
+    # livros: List[ComentarioSchema]
