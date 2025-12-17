@@ -1,3 +1,4 @@
+from urllib.parse import unquote
 from flask_openapi3 import APIBlueprint, Tag
 from http import HTTPStatus
 from sqlalchemy.exc import IntegrityError
@@ -5,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from models import Session
 from models.usuario import Usuario
 from schemas.error import ErrorSchema
-from schemas.usuario import UsuarioSchema, UsuarioViewSchema, apresenta_usuario
+from schemas.usuario import ListagemUsuariosSchema, UsuarioBuscaSchema, UsuarioSchema, UsuarioViewSchema, apresenta_usuario, apresenta_usuarios
 
 usuarios_bp = APIBlueprint(
     'usuarios',
@@ -45,71 +46,73 @@ def criar_usuario(form: UsuarioSchema):
     finally:
         Session.close()
 
-# @usuarios_bp.get('/usuarios/listar', tags=[usuario_tag],
-#          responses={"200": ListagemUsuariosSchema})
-# def listar_usuarios():
-#     """ Retorna uma lista de todos os usuários cadastrados
-#     """
-#     session = Session()
-#     usuarios = session.query(Usuario).all()
+@usuarios_bp.get('/listar', responses={"200": ListagemUsuariosSchema})
+def listar_usuarios():
+    """ Retorna uma lista de todos os usuários cadastrados
+    """
+    session = Session()
+    usuarios = session.query(Usuario).all()
 
-#     if not usuarios:
-#         return {
-#             "status": "success",
-#             "mensagem": "Nenhum usuário encontrado.",
-#             "usuarios": [],
-#             "quantidade": 0
-#         }, HTTPStatus.OK
+    if not usuarios:
+        return {
+            "status": "success",
+            "mensagem": "Nenhum usuário encontrado.",
+            "usuarios": [],
+            "quantidade": 0
+        }, HTTPStatus.OK
 
-#     return {
-#         "status": "success",
-#         "mensagem": f"{len(usuarios)} usuário(s) encontrado(s).",
-#         "usuarios": apresenta_usuarios(usuarios)["usuarios"],
-#         "quantidade": len(usuarios)
-#     }, HTTPStatus.OK
+    return {
+        "status": "success",
+        "mensagem": f"{len(usuarios)} usuário(s) encontrado(s).",
+        "usuarios": apresenta_usuarios(usuarios)["usuarios"],
+        "quantidade": len(usuarios)
+    }, HTTPStatus.OK
 
-# @app.get('/usuarios/<nome_usuario>', tags=[usuario_tag],
-#          responses={"200": ListagemUsuariosSchema, "404": ErrorSchema})
-# def buscar_usuario(query:UsuarioBuscaSchema):
-#     """Busca e retorna os dados detalhados de um usuário a partir do nome de usuário informado
-#     """
-#     nome_usuario = query.nome
+########-----------------------------------------########
+@usuarios_bp.get('/', responses={"200": ListagemUsuariosSchema, "404": ErrorSchema})
+def buscar_usuario(query:UsuarioBuscaSchema):
+    """Busca e retorna os dados detalhados de um usuário a partir do uuid do usuário
+    """
+    uuid_usuario = query.id_usuario
 
-#     session = Session()
-#     usuario = session.query(Usuario).filter(Usuario.nome_usuario == nome_usuario).first()
+    session = Session()
+    usuario = session.query(Usuario).filter(Usuario.usuario_id == uuid_usuario).first()
 
-#     if not usuario:
-#         return {
-#             "status": "error",
-#             "mensagem": f"Usuário '{nome_usuario}' não foi localizado no sistema."
-#         }, HTTPStatus.NOT_FOUND
-#     else:
-#         return {
-#             "status": "sucess",
-#             "dados": {
-#             "nome_usuario": usuario.nome_usuario,
-#             "email": usuario.email,
-#             "data_insercao": usuario.data_insercao
-#         }
-#     }, HTTPStatus.OK
+    if not usuario:
+        return {
+            "status": "error",
+            "mensagem": f"Usuário '{uuid_usuario}' não foi localizado no sistema."
+        }, HTTPStatus.NOT_FOUND
+    else:
+        return {
+            "status": "sucess",
+            "dados": {
+            "nome_usuario": usuario.nome_usuario,
+            "email": usuario.email,
+            "data_criacao": usuario.data_criacao,
+            "usuario_id": usuario.usuario_id
+        }
+    }, HTTPStatus.OK
 
-# @app.delete('/usuarios', tags=[usuario_tag],
-#             responses={"200": ListagemUsuariosSchema, "404": ErrorSchema})
-# def deletar_usuario(query:UsuarioBuscaSchema):
-#     """Remove um usuário do sistema com base no nome de usuário fornecido.
-#     Retorna uma resposta indicando o sucesso ou a falha da operação.
-#     """
-#     usuario_nome = unquote(unquote(query.nome))
-#     session = Session()
-#     count = session.query(Usuario).filter(Usuario.nome_usuario == usuario_nome).delete()
-#     session.commit()
-#     if count:
-#         return {
-#             "status": "sucess",
-#             "mensagem": f"Usuário '{usuario_nome}' removido com sucesso."
-#         }, HTTPStatus.OK
-#     else:
-#         return {
-#             "status": "error",
-#             "mensagem": f"Usuário '{usuario_nome}' não encontrado na base."
-#         }, HTTPStatus.NOT_FOUND
+
+########-----------------------------------------########
+@usuarios_bp.delete('/',
+            responses={"200": ListagemUsuariosSchema, "404": ErrorSchema})
+def deletar_usuario(query:UsuarioBuscaSchema):
+    """Remove um usuário do sistema com base no uuid fornecido.
+    Retorna uma resposta indicando o sucesso ou a falha da operação.
+    """
+    uuid_usuario = unquote(query.id_usuario)
+    session = Session()
+    count = session.query(Usuario).filter(Usuario.usuario_id == uuid_usuario).delete()
+    session.commit()
+    if count:
+        return {
+            "status": "sucess",
+            "mensagem": f"Usuário '{uuid_usuario}' removido com sucesso."
+        }, HTTPStatus.OK
+    else:
+        return {
+            "status": "error",
+            "mensagem": f"Usuário '{uuid_usuario}' não encontrado na base."
+        }, HTTPStatus.NOT_FOUND

@@ -15,7 +15,7 @@ class UsuarioBuscaSchema(BaseModel):
     """ Define como deve ser a estrutura que representa a busca.
         A busca será feita apenas com base no nome de usuário.
     """
-    nome: str = "exemplo"
+    id_usuario: str = "7a743fa4-57b5-4b0b-b97a-5da34a58bf62"
 
 class ListagemUsuariosSchema(BaseModel):
     """ Define como uma listagem de produtos será retornada.
@@ -27,6 +27,7 @@ def apresenta_usuario(usuario:Usuario):
         UsuarioViewSchema.
     """
     return {
+            "usuario_id": usuario.usuario_id,
             "email": usuario.email,
             "nome_usuario": usuario.nome_usuario,
             "data_criacao": usuario.data_criacao
@@ -39,6 +40,7 @@ def apresenta_usuarios(usuarios:List[Usuario]):
     result = []
     for usuario in usuarios:
         result.append({
+            "usuario_id": usuario.usuario_id,
             "email": usuario.email,
             "nome_usuario": usuario.nome_usuario,
             "data_criacao": usuario.data_criacao
