@@ -1,4 +1,5 @@
 from urllib.parse import unquote
+import uuid
 from flask_openapi3 import APIBlueprint, Tag
 from http import HTTPStatus
 from sqlalchemy.exc import IntegrityError
@@ -28,7 +29,6 @@ def criar_usuario(form: UsuarioSchema):
             senha = form.senha
         )
 
-
         Session.add(usuario)
         Session.commit()
 
@@ -44,75 +44,113 @@ def criar_usuario(form: UsuarioSchema):
         return {"erro": str(e)}, HTTPStatus.BAD_REQUEST
 
     finally:
-        Session.close()
+        Session.remove()
 
 @usuarios_bp.get('/listar', responses={"200": ListagemUsuariosSchema})
 def listar_usuarios():
     """ Retorna uma lista de todos os usuários cadastrados
     """
-    session = Session()
-    usuarios = session.query(Usuario).all()
+    try:
+        # session = Session()
+        usuarios = Session.query(Usuario).all()
 
-    if not usuarios:
+        if not usuarios:
+            return {
+                "status": "success",
+                "mensagem": "Nenhum usuário encontrado.",
+                "usuarios": [],
+                "quantidade": 0
+            }, HTTPStatus.OK
+
         return {
             "status": "success",
-            "mensagem": "Nenhum usuário encontrado.",
-            "usuarios": [],
-            "quantidade": 0
+            "mensagem": f"{len(usuarios)} usuário(s) encontrado(s).",
+            "usuarios": apresenta_usuarios(usuarios)["usuarios"],
+            "quantidade": len(usuarios)
         }, HTTPStatus.OK
+    
+    except Exception as e:
+        return {"status": "error", "mensagem": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
+    
+    finally:
+        Session.remove()
 
-    return {
-        "status": "success",
-        "mensagem": f"{len(usuarios)} usuário(s) encontrado(s).",
-        "usuarios": apresenta_usuarios(usuarios)["usuarios"],
-        "quantidade": len(usuarios)
-    }, HTTPStatus.OK
-
-########-----------------------------------------########
 @usuarios_bp.get('/', responses={"200": ListagemUsuariosSchema, "404": ErrorSchema})
 def buscar_usuario(query:UsuarioBuscaSchema):
     """Busca e retorna os dados detalhados de um usuário a partir do uuid do usuário
     """
-    uuid_usuario = query.id_usuario
+    try:
+        uuid_usuario = unquote(query.id_usuario)
+        uuid.UUID(uuid_usuario)
+    
+    except ValueError:
+        return {"status": "error", "mensagem": "UUID inválido"}, HTTPStatus.BAD_REQUEST
 
-    session = Session()
-    usuario = session.query(Usuario).filter(Usuario.usuario_id == uuid_usuario).first()
+    try:
+        usuario = Session.query(Usuario).filter(Usuario.usuario_id == uuid_usuario).first()
 
-    if not usuario:
-        return {
-            "status": "error",
-            "mensagem": f"Usuário '{uuid_usuario}' não foi localizado no sistema."
-        }, HTTPStatus.NOT_FOUND
-    else:
-        return {
-            "status": "sucess",
-            "dados": {
-            "nome_usuario": usuario.nome_usuario,
-            "email": usuario.email,
-            "data_criacao": usuario.data_criacao,
-            "usuario_id": usuario.usuario_id
-        }
-    }, HTTPStatus.OK
+        if not usuario:
+            return {
+                "status": "error",
+                "mensagem": f"Usuário '{uuid_usuario}' não foi localizado no sistema."
+            }, HTTPStatus.NOT_FOUND
+        else:
+            return {
+                "status": "sucess",
+                "dados": {
+                "nome_usuario": usuario.nome_usuario,
+                "email": usuario.email,
+                "data_criacao": usuario.data_criacao,
+                "usuario_id": usuario.usuario_id
+            }
+        }, HTTPStatus.OK
+    
+    except Exception as e:
+        return {"status": "error", "mensagem": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
+    
+    finally:
+        Session.remove()
 
-
-########-----------------------------------------########
 @usuarios_bp.delete('/',
             responses={"200": ListagemUsuariosSchema, "404": ErrorSchema})
 def deletar_usuario(query:UsuarioBuscaSchema):
     """Remove um usuário do sistema com base no uuid fornecido.
     Retorna uma resposta indicando o sucesso ou a falha da operação.
     """
-    uuid_usuario = unquote(query.id_usuario)
-    session = Session()
-    count = session.query(Usuario).filter(Usuario.usuario_id == uuid_usuario).delete()
-    session.commit()
-    if count:
-        return {
-            "status": "sucess",
-            "mensagem": f"Usuário '{uuid_usuario}' removido com sucesso."
-        }, HTTPStatus.OK
-    else:
-        return {
-            "status": "error",
-            "mensagem": f"Usuário '{uuid_usuario}' não encontrado na base."
-        }, HTTPStatus.NOT_FOUND
+    try:
+        uuid_usuario = unquote(query.id_usuario)
+        uuid.UUID(uuid_usuario)
+    
+    except ValueError:
+        return {"status": "error", "mensagem": "UUID inválido"}, HTTPStatus.BAD_REQUEST
+
+
+    try:
+        usuario = Session.query(Usuario).filter(Usuario.usuario_id == uuid_usuario).first()
+        
+        if usuario:
+            Session.query(Usuario).filter(Usuario.usuario_id == uuid_usuario).delete()
+            Session.commit()
+            
+            return {
+                "status": "sucess",
+                "mensagem": f"Usuário '{uuid_usuario}' removido com sucesso."
+            }, HTTPStatus.OK
+        else:
+            return {
+                "status": "error",
+                "mensagem": f"Usuário '{uuid_usuario}' não encontrado na base."
+            }, HTTPStatus.NOT_FOUND
+    
+    except IntegrityError:
+        Session.rollback()
+    
+        return {"status": "error", "mensagem": "Não é possível deletar"}, HTTPStatus.CONFLICT
+    
+    except Exception as e:
+        Session.rollback()
+
+        return {"status": "error", "mensagem": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
+
+    finally:
+        Session.remove()
