@@ -13,7 +13,7 @@ class UsuarioSchema(BaseModel):
 
 class UsuarioBuscaSchema(BaseModel):
     """ Define como deve ser a estrutura que representa a busca.
-        A busca será feita apenas com base no nome de usuário.
+        A busca será feita apenas com base no uuid do usuario.
     """
     id_usuario: str = "7a743fa4-57b5-4b0b-b97a-5da34a58bf62"
 
