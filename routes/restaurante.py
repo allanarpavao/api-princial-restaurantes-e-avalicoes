@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from models import Session
 from models.restaurante import Restaurante
 from schemas.error import ErrorSchema
-from schemas.restaurante import ListagemRestaurantesSchema, RestauranteBuscaSchema, RestaurantePath, RestauranteSchema, RestauranteUpdateSchema, RestauranteViewSchema
+from schemas.restaurante import ListagemRestaurantesSchema, RestauranteBuscaSchema, RestaurantePathSchema, RestauranteSchema, RestauranteUpdateSchema, RestauranteViewSchema
 
 restaurantes_bp = APIBlueprint(
     'restaurantes',
@@ -47,13 +47,13 @@ def criar_restaurante(form: RestauranteSchema):
     finally:
         Session.remove()
 
-@restaurantes_bp.get('/', responses={"200": ListagemRestaurantesSchema, "404": ErrorSchema})
-def buscar_restaurante(query:RestauranteBuscaSchema):
+@restaurantes_bp.get('/<int:restaurante_id>', responses={"200": ListagemRestaurantesSchema, "404": ErrorSchema})
+def buscar_restaurante(path:RestaurantePathSchema):
     """Busca e retorna os dados detalhados de um restaurante a partir do id
     """
    
     try:
-        numero_restaurante = query.id_restaurante
+        numero_restaurante = path.restaurante_id
         restaurante = Session.query(Restaurante).filter(Restaurante.restaurante_id == numero_restaurante).first()
 
         if not restaurante:
@@ -74,14 +74,14 @@ def buscar_restaurante(query:RestauranteBuscaSchema):
         Session.remove()
 
 
-@restaurantes_bp.delete('/',
+@restaurantes_bp.delete('/<int:restaurante_id>',
             responses={"200": ListagemRestaurantesSchema, "404": ErrorSchema})
-def deletar_restaurante(query:RestauranteBuscaSchema):
-    """Remove um restaurante do sistema com base no uuid fornecido.
+def deletar_restaurante(path: RestaurantePathSchema):
+    """Remove um restaurante do sistema com base no id fornecido.
     Retorna uma resposta indicando o sucesso ou a falha da operação.
     """
     
-    numero_restaurante = query.id_restaurante
+    numero_restaurante = path.restaurante_id
    
     try:
         restaurante = Session.query(Restaurante).filter(Restaurante.restaurante_id == numero_restaurante).first()
@@ -114,10 +114,11 @@ def deletar_restaurante(query:RestauranteBuscaSchema):
         Session.remove()
 
 @restaurantes_bp.patch('/<int:restaurante_id>', responses={"200": RestauranteViewSchema, "404": ErrorSchema, "400": ErrorSchema})
-def atualizar_restaurante(path: RestaurantePath, body: RestauranteUpdateSchema):
+def atualizar_restaurante(path: RestaurantePathSchema, body: RestauranteUpdateSchema):
     """Atualiza parcialmente um restaurante existente.
     Apenas os campos enviados serão atualizados
     """
+    # breakpoint()
     restaurante = Session.query(Restaurante).filter(Restaurante.restaurante_id == path.restaurante_id).first()
 
     if not restaurante:
@@ -125,16 +126,22 @@ def atualizar_restaurante(path: RestaurantePath, body: RestauranteUpdateSchema):
     
     try:
         dados_update = body.model_dump(exclude_unset=True)
-        # breakpoint()
 
         for campo, valor in dados_update.items():
             setattr(restaurante, campo, valor)
         
         Session.commit()
+        return RestauranteViewSchema.model_validate(restaurante).model_dump(), HTTPStatus.OK
 
     except IntegrityError:
         Session.rollback()
     
         return {"status": "error", "mensagem": "Não é possível editar restaurante"}, HTTPStatus.CONFLICT
+    
+    except Exception as e:
+        Session.rollback()
 
-    return RestauranteViewSchema.model_validate(restaurante).model_dump(), HTTPStatus.OK
+        return {"status": "error", "mensagem": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
+    
+    finally:
+        Session.remove()

@@ -54,4 +54,7 @@ class UsuarioViewSchema(BaseModel):
     email: str
     nome_usuario: str
     data_criacao: datetime
-    # livros: List[ComentarioSchema]
+
+
+# class UsuarioPath(BaseModel):
+#     restaurante_id: int = 1

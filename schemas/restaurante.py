@@ -51,5 +51,5 @@ class RestauranteUpdateSchema(BaseModel):
     endereco_2: Optional[str] = None
     culinaria: Optional[str] = None
 
-class RestaurantePath(BaseModel):
+class RestaurantePathSchema(BaseModel):
     restaurante_id: int = 1
