@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from models import Session
 from models.restaurante import Restaurante
 from schemas.error import ErrorSchema
-from schemas.restaurante import ListagemRestaurantesSchema, RestauranteBuscaSchema, RestauranteSchema, RestauranteViewSchema
+from schemas.restaurante import ListagemRestaurantesSchema, RestauranteBuscaSchema, RestaurantePath, RestauranteSchema, RestauranteUpdateSchema, RestauranteViewSchema
 
 restaurantes_bp = APIBlueprint(
     'restaurantes',
@@ -113,6 +113,28 @@ def deletar_restaurante(query:RestauranteBuscaSchema):
     finally:
         Session.remove()
 
-@restaurantes_bp.patch('/', responses={"200": ListagemRestaurantesSchema, "404": ErrorSchema})
-def atualizar_restaurante(query:RestauranteBuscaSchema):
-    numero_restaurante = query.id_restaurante
+@restaurantes_bp.patch('/<int:restaurante_id>', responses={"200": RestauranteViewSchema, "404": ErrorSchema, "400": ErrorSchema})
+def atualizar_restaurante(path: RestaurantePath, body: RestauranteUpdateSchema):
+    """Atualiza parcialmente um restaurante existente.
+    Apenas os campos enviados serão atualizados
+    """
+    restaurante = Session.query(Restaurante).filter(Restaurante.restaurante_id == path.restaurante_id).first()
+
+    if not restaurante:
+        return {"erro": "Restaurante não encontrado"}, HTTPStatus.NOT_FOUND
+    
+    try:
+        dados_update = body.model_dump(exclude_unset=True)
+        # breakpoint()
+
+        for campo, valor in dados_update.items():
+            setattr(restaurante, campo, valor)
+        
+        Session.commit()
+
+    except IntegrityError:
+        Session.rollback()
+    
+        return {"status": "error", "mensagem": "Não é possível editar restaurante"}, HTTPStatus.CONFLICT
+
+    return RestauranteViewSchema.model_validate(restaurante).model_dump(), HTTPStatus.OK

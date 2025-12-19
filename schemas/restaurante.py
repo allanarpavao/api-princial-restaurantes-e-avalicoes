@@ -46,7 +46,10 @@ class RestauranteUpdateSchema(BaseModel):
     """Define os campos que podem ser editados de um restaurante cadastrado
     """
 
-    nome_restaurante: Optional[str]
-    endereco_1: Optional[str]
-    endereco_2: Optional[str]
-    culinaria: Optional[str]
+    nome_restaurante: Optional[str] = None
+    endereco_1: Optional[str] = None
+    endereco_2: Optional[str] = None
+    culinaria: Optional[str] = None
+
+class RestaurantePath(BaseModel):
+    restaurante_id: int = 1
