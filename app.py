@@ -1,10 +1,7 @@
 from flask import redirect
 from flask_openapi3 import OpenAPI, Info, Tag
 from flask_cors import CORS
-from http import HTTPStatus
-from urllib.parse import unquote
-from pydantic import ValidationError
-from sqlalchemy.exc import IntegrityError
+
 
 from routes import BLUEPRINTS
 
