@@ -9,6 +9,9 @@ from models.restaurante import Restaurante
 from schemas.error import ErrorSchema
 from schemas.restaurante import ListagemRestaurantesSchema, RestauranteBuscaSchema, RestaurantePathSchema, RestauranteSchema, RestauranteUpdateSchema, RestauranteViewSchema
 
+from schemas.services import BuscaRestaurantesProximidadeRequest
+from utils.openstreetmap import OpenStreetMapService
+
 restaurantes_bp = APIBlueprint(
     'restaurantes',
     __name__,
@@ -16,18 +19,70 @@ restaurantes_bp = APIBlueprint(
     abp_tags=[Tag(name='Restaurantes', description='Operações de restaurantes')]
 )
 
+
+def sincronizar_restaurantes_overpass(restaurantes: list):
+    """Função que sincroniza DB"""
+    try:
+        if not restaurantes:
+            return {'sincronizados': 0, 'duplicados': 0}
+        
+        sincronizados = 0
+        duplicados = 0
+        
+        for resto_ext in restaurantes:
+            try:
+                existe = Session.query(Restaurante).filter_by(
+                    id_osm=str(resto_ext.get('id_osm'))
+                ).first()
+                
+                if existe:
+                    duplicados += 1
+                    continue
+                
+                novo = Restaurante(
+                    id_osm=str(resto_ext.get('id_osm')),
+                    nome=resto_ext.get('nome', 'Sem nome'),
+                    endereco=resto_ext.get('endereco') or 'Sem endereço',
+                    cuisine=resto_ext.get('cuisine', 'Não informado'),
+                    latitude=resto_ext.get('latitude'),
+                    longitude=resto_ext.get('longitude'),
+                    telefone=resto_ext.get('telefone'),
+                    website=resto_ext.get('website')
+                )
+                
+                Session.add(novo)
+                sincronizados += 1
+                
+            except Exception as e:
+                print(f"Erro ao sincronizar {resto_ext.get('nome')}: {str(e)}")
+        
+        Session.commit()
+        return {'sincronizados': sincronizados, 'duplicados': duplicados}
+        
+    except Exception as e:
+        Session.rollback()
+        raise Exception(str(e))
+    finally:
+        Session.remove()
+
+
+
 @restaurantes_bp.post('/criar', responses={"201": RestauranteViewSchema, "409": ErrorSchema, "400": ErrorSchema})
-def criar_restaurante(form: RestauranteSchema):
+def criar_restaurante(body: RestauranteSchema):
     """Adiciona um novo restaurante à base de dados
 
     Retorna uma representação do restaurante.
     """
     try:
         restaurante = Restaurante(
-            nome_restaurante = form.nome_restaurante,
-            endereco_1 = form.endereco_1,
-            endereco_2 = form.endereco_2,
-            culinaria = form.culinaria
+            nome=body.nome,
+            endereco=body.endereco,
+            cuisine=body.cuisine,
+            latitude=body.latitude,
+            longitude=body.longitude,
+            telefone=body.telefone,
+            website=body.website,
+            id_osm=body.id_osm
         )
 
         Session.add(restaurante)
@@ -145,3 +200,32 @@ def atualizar_restaurante(path: RestaurantePathSchema, body: RestauranteUpdateSc
     
     finally:
         Session.remove()
+
+
+@restaurantes_bp.post('/buscar-proximidade')
+def buscar_restaurantes(body:BuscaRestaurantesProximidadeRequest):
+    """Busca restaurantes próximos e os salva no banco de dados.
+
+    """
+    resultado = OpenStreetMapService.buscar_restaurantes_proximidade(
+        latitude=body.latitude,
+        longitude=body.longitude,
+        raio_km=body.raio_km,
+        tipo=body.tipo
+    )
+    if resultado["sucesso"]:
+        sync = sincronizar_restaurantes_overpass(resultado['restaurantes'])
+            
+        return {
+                'sucesso': True,
+                'total': len(resultado['restaurantes']),
+                'sincronizacao': {
+                    'sincronizados': sync['sincronizados'],
+                    'duplicados': sync['duplicados']
+                },
+                'bbox_utilizado': resultado.get('bbox_utilizado'),
+                'mensagem': f"Sincronizou {sync['sincronizados']} restaurantes com sucesso"
+            }, HTTPStatus.OK
+    else:
+        return resultado, HTTPStatus.BAD_REQUEST
+    

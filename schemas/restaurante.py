@@ -1,17 +1,22 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
 
 from datetime import datetime
 from models.restaurante import Restaurante
 
 class RestauranteSchema(BaseModel):
-    """Define os campos de um novo restaurante a ser inserido
+    """Define os campos de um novo restaurante (manual ou Overpass)
     """
+    nome: str = Field(..., min_length=1, max_length=200, example="Jappa da Quitanda")
+    endereco: str = Field(..., min_length=1, max_length=200, example="Rua XXXX, 123 - Bairro")
+    cuisine: str = Field(..., min_length=1, max_length=100, example="japonesa")
     
-    nome_restaurante: str = "Jappa da Quitanda"
-    endereco_1: str = "Rua XXXX, numero - complemento"
-    endereco_2: str = "Bairro, Cidade, Estado, CEP"
-    culinaria: str = "mediterranea, indiana, japonesa"
+    latitude: Optional[float] = Field(None, description="Coordenada latitude")
+    longitude: Optional[float] = Field(None, description="Coordenada longitude")
+    telefone: Optional[str] = Field(None, max_length=20)
+    website: Optional[str] = Field(None, max_length=300)
+    id_osm: Optional[str] = Field(None, max_length=50, description="ID do Overpass")
+
 
 
 class RestauranteViewSchema(BaseModel):
@@ -19,10 +24,14 @@ class RestauranteViewSchema(BaseModel):
     """
 
     restaurante_id: int
-    nome_restaurante: str
-    endereco_1: str
-    endereco_2: str
-    culinaria: str
+    nome: str
+    endereco: str
+    cuisine: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    telefone: Optional[str] = None
+    website: Optional[str] = None
+    id_osm: Optional[str] = None
     data_criacao: datetime
 
     class Config:
@@ -46,10 +55,9 @@ class RestauranteUpdateSchema(BaseModel):
     """Define os campos que podem ser editados de um restaurante cadastrado
     """
 
-    nome_restaurante: Optional[str] = None
-    endereco_1: Optional[str] = None
-    endereco_2: Optional[str] = None
-    culinaria: Optional[str] = None
+    nome: Optional[str] = None
+    endereco: Optional[str] = None
+    cuisine: Optional[str] = None
 
 class RestaurantePathSchema(BaseModel):
     restaurante_id: int = 1
