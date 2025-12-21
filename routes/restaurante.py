@@ -63,7 +63,7 @@ def buscar_restaurante(path:RestaurantePathSchema):
             }, HTTPStatus.NOT_FOUND
         else:
             return {
-                "status": "sucess",
+                "status": "success",
                 "dados": RestauranteViewSchema.model_validate(restaurante).model_dump()
             }, HTTPStatus.OK
     
@@ -91,7 +91,7 @@ def deletar_restaurante(path: RestaurantePathSchema):
             Session.commit()
             
             return {
-                "status": "sucess",
+                "status": "success",
                 "mensagem": f"Restaurante ({numero_restaurante}) '{restaurante.nome_restaurante}' removido com sucesso."
             }, HTTPStatus.OK
         else:

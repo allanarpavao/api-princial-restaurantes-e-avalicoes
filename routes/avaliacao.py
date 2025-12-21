@@ -1,13 +1,15 @@
 from urllib.parse import unquote
-import uuid
 from flask_openapi3 import APIBlueprint, Tag
 from http import HTTPStatus
 from sqlalchemy.exc import IntegrityError
 
 from models import Session
 from models.avaliacao import Avaliacao
+from models.restaurante import Restaurante
+from models.usuario import Usuario
 from schemas.error import ErrorSchema
-from schemas.avaliacao import AvaliacaoSchema, AvaliacaoViewSchema
+from schemas.avaliacao import AvaliacaoPathSchema, AvaliacaoSchema, AvaliacaoViewSchema
+from utils.validations import validar_usuario_restaurante
 
 avaliacoes_bp = APIBlueprint(
     'avaliacoes',
@@ -16,16 +18,20 @@ avaliacoes_bp = APIBlueprint(
     abp_tags=[Tag(name='Avalicoes', description='Operações de avaliacoes')]
 )
 
-@avaliacoes_bp.post('/criar', responses={"201": AvaliacaoViewSchema, "409": ErrorSchema, "400": ErrorSchema})
+@avaliacoes_bp.post('/criar', responses={"201": AvaliacaoViewSchema, "404": ErrorSchema, "409": ErrorSchema, "400": ErrorSchema})
 def criar_avaliacao(form: AvaliacaoSchema):
     """Adiciona uma nova avaliacao a um restaurante
 
     Retorna uma representação da avaliacao
     """
+    validacao = validar_usuario_restaurante(
+        form.usuario_id,
+        form.restaurante_id
+    )
 
-
-    # validar usuario
-    # validar restaurante
+    if not validacao["valid"]:
+        return validacao["error"], HTTPStatus.NOT_FOUND
+    
     try:
         avaliacao = Avaliacao(
             usuario_id = form.usuario_id,
@@ -51,71 +57,86 @@ def criar_avaliacao(form: AvaliacaoSchema):
     finally:
         Session.remove()
 
-# @avaliacoes_bp.get('/<int:restaurante_id>', responses={"200": ListagemRestaurantesSchema, "404": ErrorSchema})
-# def buscar_restaurante(path:RestaurantePathSchema):
-#     """Busca e retorna os dados detalhados de um restaurante a partir do id
-#     """
-   
-#     try:
-#         numero_restaurante = path.restaurante_id
-#         restaurante = Session.query(Restaurante).filter(Restaurante.restaurante_id == numero_restaurante).first()
+@avaliacoes_bp.get('/<int:id_restaurante>/<id_usuario>', responses={"404": ErrorSchema})
+# {"200": ListagemRestaurantesSchema, "404": ErrorSchema}
+def buscar_avaliacao(path:AvaliacaoPathSchema):
+    """Busca e retorna os dados de uma avaliacao com base no restaurante e usuario
+    """
+    numero_restaurante = path.id_restaurante
+    usuario_id = str(path.id_usuario)
 
-#         if not restaurante:
-#             return {
-#                 "status": "error",
-#                 "mensagem": f"Restaurante não localizado no sistema."
-#             }, HTTPStatus.NOT_FOUND
-#         else:
-#             return {
-#                 "status": "sucess",
-#                 "dados": RestauranteViewSchema.model_validate(restaurante).model_dump()
-#             }, HTTPStatus.OK
-    
-#     except Exception as e:
-#         return {"status": "error", "mensagem": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
-    
-#     finally:
-#         Session.remove()
-
-
-# @avaliacoes_bp.delete('/<int:restaurante_id>',
-#             responses={"200": ListagemRestaurantesSchema, "404": ErrorSchema})
-# def deletar_restaurante(path: RestaurantePathSchema):
-#     """Remove um restaurante do sistema com base no id fornecido.
-#     Retorna uma resposta indicando o sucesso ou a falha da operação.
-#     """
-    
-#     numero_restaurante = path.restaurante_id
-   
-#     try:
-#         restaurante = Session.query(Restaurante).filter(Restaurante.restaurante_id == numero_restaurante).first()
-        
-#         if restaurante:
-#             Session.query(Restaurante).filter(Restaurante.restaurante_id == numero_restaurante).delete()
-#             Session.commit()
+    try:
+        validacao = validar_usuario_restaurante(usuario_id,numero_restaurante)
+        if not validacao["valid"]:
             
-#             return {
-#                 "status": "sucess",
-#                 "mensagem": f"Restaurante ({numero_restaurante}) '{restaurante.nome_restaurante}' removido com sucesso."
-#             }, HTTPStatus.OK
-#         else:
-#             return {
-#                 "status": "error",
-#                 "mensagem": f"Restaurante não encontrado no sistema."
-#             }, HTTPStatus.NOT_FOUND
-    
-#     except IntegrityError:
-#         Session.rollback()
-    
-#         return {"status": "error", "mensagem": "Não é possível deletar"}, HTTPStatus.CONFLICT
-    
-#     except Exception as e:
-#         Session.rollback()
+            return validacao["error"], HTTPStatus.NOT_FOUND
+        else:
+            avaliacao = Session.query(Avaliacao).filter(
+            Avaliacao.restaurante_id == numero_restaurante,
+            Avaliacao.usuario_id == usuario_id).first()
 
-#         return {"status": "error", "mensagem": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
+            if not avaliacao:
+                return {
+                "status": "error",
+                "mensagem": f"Avaliacao não localizada no sistema."
+            }, HTTPStatus.NOT_FOUND
 
-#     finally:
-#         Session.remove()
+            return {
+                "status": "success",
+                "dados": AvaliacaoViewSchema.model_validate(avaliacao).model_dump()
+            }, HTTPStatus.OK
+    
+    except Exception as e:
+        return {"status": "error", "mensagem": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
+    
+    finally:
+        Session.remove()
+
+
+@avaliacoes_bp.delete('/<int:id_restaurante>/<id_usuario>',
+            responses={"404": ErrorSchema})
+def deletar_avaliacao(path: AvaliacaoPathSchema):
+    """Remove uma avaliacao do sistema com base nos dados de usuario e restaurante fornecido.
+    Retorna uma resposta indicando o sucesso ou a falha da operação.
+    """
+    numero_restaurante = path.id_restaurante
+    usuario_id = str(path.id_usuario)
+   
+    try:
+        validacao = validar_usuario_restaurante(usuario_id,numero_restaurante)
+        if not validacao["valid"]:
+            return validacao["error"], HTTPStatus.NOT_FOUND
+        else:
+            avaliacao = Session.query(Avaliacao).filter(
+                Avaliacao.restaurante_id == numero_restaurante, Avaliacao.usuario_id == usuario_id).first()
+       
+            if avaliacao:
+                Session.query(Avaliacao).filter(
+                    Avaliacao.restaurante_id == numero_restaurante, Avaliacao.usuario_id == usuario_id).delete()
+                Session.commit()
+                
+                return {
+                    "status": "success",
+                    "mensagem": f"Avaliacao removida com sucesso."
+                }, HTTPStatus.OK
+            else:
+                return {
+                    "status": "error",
+                    "mensagem": f"Avaliacao não encontrada no sistema."
+                }, HTTPStatus.NOT_FOUND
+        
+    except IntegrityError:
+        Session.rollback()
+    
+        return {"status": "error", "mensagem": "Não é possível deletar"}, HTTPStatus.CONFLICT
+    
+    except Exception as e:
+        Session.rollback()
+
+        return {"status": "error", "mensagem": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
+
+    finally:
+        Session.remove()
 
 # @avaliacoes_bp.patch('/<int:restaurante_id>', responses={"200": RestauranteViewSchema, "404": ErrorSchema, "400": ErrorSchema})
 # def atualizar_restaurante(path: RestaurantePathSchema, body: RestauranteUpdateSchema):

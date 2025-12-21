@@ -2,6 +2,8 @@ from pydantic import BaseModel
 from typing import Optional, List
 
 from datetime import datetime
+
+from uuid import UUID
 from models.avaliacao import Avaliacao
 
 class AvaliacaoSchema(BaseModel):
@@ -22,7 +24,7 @@ class AvaliacaoViewSchema(BaseModel):
     restaurante_id: int
     nota: int
     comentario: str
-    data_criacao: datetime
+    data_avaliacao: datetime
 
     class Config:
         from_attributes = True 
@@ -50,5 +52,6 @@ class AvaliacaoViewSchema(BaseModel):
 #     endereco_2: Optional[str] = None
 #     culinaria: Optional[str] = None
 
-# class RestaurantePathSchema(BaseModel):
-#     restaurante_id: int = 1
+class AvaliacaoPathSchema(BaseModel):
+    id_restaurante: int
+    id_usuario: UUID

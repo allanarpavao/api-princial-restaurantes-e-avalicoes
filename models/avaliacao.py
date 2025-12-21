@@ -26,10 +26,3 @@ class Avaliacao(Base):
     # relacionamento
     usuario: Mapped['Usuario'] = relationship("Usuario", back_populates="avaliacoes", foreign_keys=[usuario_id])
     restaurante: Mapped['Restaurante'] = relationship("Restaurante", back_populates="avaliacoes", foreign_keys=[restaurante_id])
-
-    # def __init__(self, nota:int, comentario:str, data_avaliacao:Optional[DateTime] = None):
-    #     self.nota = nota
-    #     self.comentario = comentario
-
-    #     if data_avaliacao:
-    #         self.data_avaliacao = data_avaliacao

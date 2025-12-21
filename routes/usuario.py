@@ -96,7 +96,7 @@ def buscar_usuario(query:UsuarioBuscaSchema):
             }, HTTPStatus.NOT_FOUND
         else:
             return {
-                "status": "sucess",
+                "status": "success",
                 "dados": {
                 "nome_usuario": usuario.nome_usuario,
                 "email": usuario.email,
@@ -131,9 +131,8 @@ def deletar_usuario(query:UsuarioBuscaSchema):
         if usuario:
             Session.query(Usuario).filter(Usuario.usuario_id == uuid_usuario).delete()
             Session.commit()
-            
             return {
-                "status": "sucess",
+                "status": "success",
                 "mensagem": f"Usuário '{uuid_usuario}' removido com sucesso."
             }, HTTPStatus.OK
         else:
@@ -149,7 +148,7 @@ def deletar_usuario(query:UsuarioBuscaSchema):
     
     except Exception as e:
         Session.rollback()
-
+        
         return {"status": "error", "mensagem": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
 
     finally:
