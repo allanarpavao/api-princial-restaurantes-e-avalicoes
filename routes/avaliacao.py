@@ -66,7 +66,7 @@ def buscar_avaliacao(path:AvaliacaoPathSchema):
     usuario_id = str(path.id_usuario)
 
     try:
-        validacao = validar_usuario_restaurante(usuario_id,numero_restaurante)
+        validacao = validar_usuario_restaurante(usuario_id, numero_restaurante)
         if not validacao["valid"]:
             
             return validacao["error"], HTTPStatus.NOT_FOUND

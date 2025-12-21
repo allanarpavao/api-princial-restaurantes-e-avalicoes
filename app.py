@@ -16,7 +16,6 @@ for blueprint in BLUEPRINTS:
 
 # tags
 home_tag = Tag(name="Documentação", description="Documentação: Swagger")
-# usuario_tag = Tag(name="Usuários", description="Operações de usuário")
 
 
 @app.route('/')
