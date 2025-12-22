@@ -147,7 +147,7 @@ def deletar_restaurante(path: RestaurantePathSchema):
             
             return {
                 "status": "success",
-                "mensagem": f"Restaurante ({numero_restaurante}) '{restaurante.nome_restaurante}' removido com sucesso."
+                "mensagem": f"Restaurante ({numero_restaurante}) '{restaurante.nome}' removido com sucesso."
             }, HTTPStatus.OK
         else:
             return {

@@ -18,7 +18,6 @@ class RestauranteSchema(BaseModel):
     id_osm: Optional[str] = Field(None, max_length=50, description="ID do Overpass")
 
 
-
 class RestauranteViewSchema(BaseModel):
     """Define como o restaurante será retornado
     """
@@ -58,6 +57,11 @@ class RestauranteUpdateSchema(BaseModel):
     nome: Optional[str] = None
     endereco: Optional[str] = None
     cuisine: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    telefone: Optional[str] = None
+    website: Optional[str] = None
+    id_osm: Optional[str] = None
 
 class RestaurantePathSchema(BaseModel):
     restaurante_id: int = 1
