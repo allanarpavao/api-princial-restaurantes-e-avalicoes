@@ -65,3 +65,8 @@ class RestauranteUpdateSchema(BaseModel):
 
 class RestaurantePathSchema(BaseModel):
     restaurante_id: int = 1
+
+
+class DistanciaQuery(BaseModel):
+    latitude_usuario: Optional[float] = -23.5505
+    longitude_usuario: Optional[float] = -46.6333

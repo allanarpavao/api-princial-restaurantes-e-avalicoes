@@ -25,32 +25,10 @@ class AvaliacaoViewSchema(BaseModel):
     nota: int
     comentario: str
     data_avaliacao: datetime
+    
 
     class Config:
-        from_attributes = True 
-
-
-# class RestauranteBuscaSchema(BaseModel):
-#     """ Define como deve ser a estrutura que representa a busca.
-#         A busca será feita apenas com base id do restaurante.
-#     """
-#     id_restaurante: int = 1
-
-
-# class ListagemRestaurantesSchema(BaseModel):
-#     """ Define como uma listagem de restaurantes será retornada.
-#     """
-#     restaurantes: List[RestauranteSchema]
-
-
-# class RestauranteUpdateSchema(BaseModel):
-#     """Define os campos que podem ser editados de um restaurante cadastrado
-#     """
-
-#     nome_restaurante: Optional[str] = None
-#     endereco_1: Optional[str] = None
-#     endereco_2: Optional[str] = None
-#     culinaria: Optional[str] = None
+        from_attributes = True
 
 class AvaliacaoPathSchema(BaseModel):
     id_restaurante: int

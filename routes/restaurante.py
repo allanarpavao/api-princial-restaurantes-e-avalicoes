@@ -3,11 +3,13 @@ import uuid
 from flask_openapi3 import APIBlueprint, Tag
 from http import HTTPStatus
 from sqlalchemy.exc import IntegrityError
+from flask import request
+from typing import Optional, Dict, Any
 
 from models import Session
 from models.restaurante import Restaurante
 from schemas.error import ErrorSchema
-from schemas.restaurante import ListagemRestaurantesSchema, RestauranteBuscaSchema, RestaurantePathSchema, RestauranteSchema, RestauranteUpdateSchema, RestauranteViewSchema
+from schemas.restaurante import DistanciaQuery, ListagemRestaurantesSchema, RestauranteBuscaSchema, RestaurantePathSchema, RestauranteSchema, RestauranteUpdateSchema, RestauranteViewSchema
 
 from schemas.services import BuscaRestaurantesProximidadeRequest
 from utils.openstreetmap import OpenStreetMapService
@@ -66,6 +68,33 @@ def sincronizar_restaurantes_overpass(restaurantes: list):
         Session.remove()
 
 
+def anexar_distancia_ao_restaurante(dados: Dict[str, Any], restaurante) -> Dict[str, Any]:
+    """
+    Lê latitude_usuario/longitude_usuario da query string,
+    chama a API secundária e, se der certo, adiciona distancia_km ao dict.
+    Não lança erro se faltar dado; apenas retorna o dict original.
+    """
+    lat_user = request.args.get("latitude_usuario", type=float)
+    lng_user = request.args.get("longitude_usuario", type=float)
+
+    if (
+        lat_user is None or lng_user is None or
+        restaurante.latitude is None or restaurante.longitude is None
+    ):
+        return dados
+
+    dist_res = OpenStreetMapService.calcular_distancia(
+        lat1=lat_user,
+        lng1=lng_user,
+        lat2=restaurante.latitude,
+        lng2=restaurante.longitude,
+    )
+
+    if dist_res.get("sucesso") and dist_res.get("distancia_km") is not None:
+        dados["distancia_km"] = dist_res["distancia_km"]
+
+    return dados
+
 
 @restaurantes_bp.post('/criar', responses={"201": RestauranteViewSchema, "409": ErrorSchema, "400": ErrorSchema})
 def criar_restaurante(body: RestauranteSchema):
@@ -103,24 +132,27 @@ def criar_restaurante(body: RestauranteSchema):
         Session.remove()
 
 @restaurantes_bp.get('/<int:restaurante_id>', responses={"200": ListagemRestaurantesSchema, "404": ErrorSchema})
-def buscar_restaurante(path:RestaurantePathSchema):
+def buscar_restaurante(path:RestaurantePathSchema, query:DistanciaQuery):
     """Busca e retorna os dados detalhados de um restaurante a partir do id
+        Opcionalmente, calcula distância entre usuário e restaurante.
     """
    
-    try:
-        numero_restaurante = path.restaurante_id
-        restaurante = Session.query(Restaurante).filter(Restaurante.restaurante_id == numero_restaurante).first()
+    numero_restaurante = path.restaurante_id
+    restaurante = Session.query(Restaurante).filter(Restaurante.restaurante_id == numero_restaurante).first()
 
-        if not restaurante:
-            return {
+    if not restaurante:
+        return {
                 "status": "error",
                 "mensagem": f"Restaurante não localizado no sistema."
             }, HTTPStatus.NOT_FOUND
-        else:
-            return {
-                "status": "success",
-                "dados": RestauranteViewSchema.model_validate(restaurante).model_dump()
-            }, HTTPStatus.OK
+    try:
+        dados_restaurante = RestauranteViewSchema.model_validate(restaurante).model_dump()
+        dados_restaurante = anexar_distancia_ao_restaurante(dados_restaurante, restaurante)
+        
+        return {
+            "status": "success",
+            "dados": dados_restaurante
+        }, HTTPStatus.OK
     
     except Exception as e:
         return {"status": "error", "mensagem": str(e)}, HTTPStatus.INTERNAL_SERVER_ERROR
@@ -173,7 +205,7 @@ def atualizar_restaurante(path: RestaurantePathSchema, body: RestauranteUpdateSc
     """Atualiza parcialmente um restaurante existente.
     Apenas os campos enviados serão atualizados
     """
-    # breakpoint()
+    
     restaurante = Session.query(Restaurante).filter(Restaurante.restaurante_id == path.restaurante_id).first()
 
     if not restaurante:
