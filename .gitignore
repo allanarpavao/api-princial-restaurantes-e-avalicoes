@@ -19,3 +19,12 @@ __pycache__/
 
 # Sistema
 .DS_Store
+
+# Docker artefatos
+.docker/
+.dockerignore
+
+# Build outputs
+*.tar
+*.tar.gz
+*.tar.bz2
