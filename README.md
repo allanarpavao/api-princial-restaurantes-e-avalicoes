@@ -349,6 +349,10 @@ docker run -p 5000:5000 \
    GET /avaliacoes/{restaurante_id}/{usuario_id}
 ```
 
+## 🏗️ Arquitetura
+
+**[📊 Ver diagrama completo da arquitetura](./docs/arquitetura-mvp.png)**
+
 ## 🤝 Contribuindo
 
 1. Crie uma branch: `git checkout -b feature/minha-feature`
