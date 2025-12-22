@@ -1,7 +1,7 @@
 from http import HTTPStatus
 import requests
 
-BASE_URL = "http://localhost:5001"
+BASE_URL = "http://127.0.0.1:8001"
 TIMEOUT = 30
 
 class OpenStreetMapService:
